@@ -2,9 +2,12 @@ from typing import List
 
 import numpy as np
 import onnxruntime
+import os
 
 from espnet_onnx.utils.config import Config
 
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OMP_WAIT_POLICY"] = "PASSIVE"
 
 class JETS:
     def __init__(
@@ -14,13 +17,19 @@ class JETS:
         use_quantized: bool = False,
     ):
         self.config = config
+        opts = onnxruntime.SessionOptions()
+        opts.intra_op_num_threads = 1
+        opts.inter_op_num_threads = 1
+        opts.execution_mode = onnxruntime.ExecutionMode.ORT_SEQUENTIAL
         if use_quantized:
             self.model = onnxruntime.InferenceSession(
-                self.config.quantized_model_path, providers=providers
+                self.config.quantized_model_path,
+                providers=providers, sess_options=opts
             )
         else:
             self.model = onnxruntime.InferenceSession(
-                self.config.model_path, providers=providers
+                self.config.model_path,
+                providers=providers, sess_options=opts
             )
 
         self.input_names = [d.name for d in self.model.get_inputs()]
